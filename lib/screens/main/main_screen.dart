@@ -244,8 +244,8 @@ class _MainScreenState extends State<MainScreen> {
                     color: AppTheme.secondaryTextColor,
                     size: 20,
                   ),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
+                  itemBuilder: (context) => <PopupMenuEntry<dynamic>>[
+                    PopupMenuItem<dynamic>(
                       child: const Row(
                         children: [
                           Icon(Icons.person_outline, size: 18),
@@ -260,7 +260,7 @@ class _MainScreenState extends State<MainScreen> {
                         );
                       },
                     ),
-                    PopupMenuItem(
+                    PopupMenuItem<dynamic>(
                       child: const Row(
                         children: [
                           Icon(Icons.settings_outlined, size: 18),
@@ -276,7 +276,7 @@ class _MainScreenState extends State<MainScreen> {
                       },
                     ),
                     const PopupMenuDivider(),
-                    PopupMenuItem(
+                    PopupMenuItem<dynamic>(
                       child: const Row(
                         children: [
                           Icon(Icons.logout, size: 18, color: AppTheme.errorColor),
