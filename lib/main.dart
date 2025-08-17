@@ -9,6 +9,7 @@ import 'package:window_manager/window_manager.dart'
     if (dart.library.html) 'web_stubs.dart';
 
 import 'providers/auth_provider.dart';
+import 'providers/client_provider.dart'; // Add this import
 import 'shared/theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/setup_screen.dart';
@@ -68,6 +69,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ClientProvider()), // Add this line
       ],
       child: MaterialApp(
         title: 'DR Lab LIMS',
@@ -90,30 +92,43 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    // Initialize auth state when app starts
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AuthProvider>(context, listen: false).initializeAuth();
-    });
+    _initializeAuth();
+  }
+
+  Future<void> _initializeAuth() async {
+    final authProvider = context.read<AuthProvider>();
+    final clientProvider = context.read<ClientProvider>();
+    
+    // Initialize auth provider (this will check stored tokens)
+    await authProvider.initializeAuth();
+    
+    // Set auth token for client service if user is authenticated
+    if (authProvider.isAuthenticated && authProvider.token != null) {
+      clientProvider.setAuthToken(authProvider.token!);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        switch (authProvider.authState) {
-          case AuthState.initial:
-          case AuthState.loading:
-            return const LoadingScreen();
-            
-          case AuthState.authenticated:
-            return const MainLayoutScreen();
-            
-          case AuthState.setupRequired:
-            return const SetupScreen();
-            
-          case AuthState.unauthenticated:
-            return const LoginScreen();
+        // Show loading screen while checking authentication
+        if (authProvider.isLoading) {
+          return const LoadingScreen();
         }
+        
+        // Show setup screen if user needs to complete setup
+        if (authProvider.isAuthenticated && authProvider.requiresSetup) {
+          return const SetupScreen();
+        }
+        
+        // Show main app if user is authenticated
+        if (authProvider.isAuthenticated) {
+          return const MainLayoutScreen();
+        }
+        
+        // Show login screen if user is not authenticated
+        return const LoginScreen();
       },
     );
   }

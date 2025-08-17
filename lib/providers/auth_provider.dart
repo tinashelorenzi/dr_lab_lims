@@ -1,7 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../providers/client_provider.dart';
 
 enum AuthState {
   initial,
@@ -44,6 +46,18 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Sync token with client provider
+  void _syncClientProviderToken(BuildContext? context) {
+    if (context != null) {
+      final clientProvider = Provider.of<ClientProvider>(context, listen: false);
+      if (_token != null) {
+        clientProvider.setAuthToken(_token!);
+      } else {
+        clientProvider.clearAuthToken();
+      }
+    }
+  }
+  
   // Initialize authentication state from stored token
   Future<void> initializeAuth() async {
     _setLoading(true);
@@ -80,7 +94,7 @@ class AuthProvider extends ChangeNotifier {
   }
   
   // Login with email and password
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, {BuildContext? context}) async {
     _setLoading(true);
     _setError(null);
     
@@ -97,6 +111,9 @@ class AuthProvider extends ChangeNotifier {
         
         // Set token in API service
         _apiService.setAuthToken(_token!);
+        
+        // Sync client provider token
+        _syncClientProviderToken(context);
         
         // Determine auth state based on setup requirement
         _authState = (response.requiresSetup == true || _user!.setupRequired)
@@ -154,7 +171,7 @@ class AuthProvider extends ChangeNotifier {
   }
   
   // Logout
-  Future<void> logout() async {
+  Future<void> logout({BuildContext? context}) async {
     _setLoading(true);
     
     try {
@@ -167,6 +184,9 @@ class AuthProvider extends ChangeNotifier {
     
     // Clear local auth data
     await _clearAuthData();
+    
+    // Clear client provider token
+    _syncClientProviderToken(context);
     
     _authState = AuthState.unauthenticated;
     _setLoading(false);
