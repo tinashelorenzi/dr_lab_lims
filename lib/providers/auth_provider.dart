@@ -1,9 +1,11 @@
+// lib/providers/auth_provider.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../providers/client_provider.dart';
+import '../providers/project_provider.dart';
 
 enum AuthState {
   initial,
@@ -46,14 +48,23 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  // Sync token with client provider
-  void _syncClientProviderToken(BuildContext? context) {
+  // Sync token with all service providers
+  void _syncProvidersToken(BuildContext? context) {
     if (context != null) {
-      final clientProvider = Provider.of<ClientProvider>(context, listen: false);
-      if (_token != null) {
-        clientProvider.setAuthToken(_token!);
-      } else {
-        clientProvider.clearAuthToken();
+      try {
+        final clientProvider = Provider.of<ClientProvider>(context, listen: false);
+        final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+        
+        if (_token != null) {
+          clientProvider.setAuthToken(_token!);
+          projectProvider.updateAuthToken(_token!);
+        } else {
+          clientProvider.clearAuthToken();
+          projectProvider.updateAuthToken(null);
+        }
+      } catch (e) {
+        // Handle provider not found gracefully
+        debugPrint('Error syncing provider tokens: $e');
       }
     }
   }
@@ -112,8 +123,8 @@ class AuthProvider extends ChangeNotifier {
         // Set token in API service
         _apiService.setAuthToken(_token!);
         
-        // Sync client provider token
-        _syncClientProviderToken(context);
+        // Sync all provider tokens
+        _syncProvidersToken(context);
         
         // Determine auth state based on setup requirement
         _authState = (response.requiresSetup == true || _user!.setupRequired)
@@ -185,8 +196,8 @@ class AuthProvider extends ChangeNotifier {
     // Clear local auth data
     await _clearAuthData();
     
-    // Clear client provider token
-    _syncClientProviderToken(context);
+    // Clear all provider tokens
+    _syncProvidersToken(context);
     
     _authState = AuthState.unauthenticated;
     _setLoading(false);

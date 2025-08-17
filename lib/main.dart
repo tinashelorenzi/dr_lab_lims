@@ -9,7 +9,8 @@ import 'package:window_manager/window_manager.dart'
     if (dart.library.html) 'web_stubs.dart';
 
 import 'providers/auth_provider.dart';
-import 'providers/client_provider.dart'; // Add this import
+import 'providers/client_provider.dart';
+import 'providers/project_provider.dart';
 import 'shared/theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/setup_screen.dart';
@@ -33,7 +34,16 @@ void main() async {
     await _initializeWindowManager();
   }
 
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ClientProvider()),
+        ChangeNotifierProvider(create: (_) => ProjectProvider()),
+      ],
+      child: const DrLabLimsApp(),
+    ),
+  );
 }
 
 Future<void> _initializeWindowManager() async {
@@ -61,24 +71,18 @@ Future<void> _initializeWindowManager() async {
   }
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class DrLabLimsApp extends StatelessWidget {
+  const DrLabLimsApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ClientProvider()), // Add this line
-      ],
-      child: MaterialApp(
-        title: 'DR Lab LIMS',
-        theme: AppTheme.lightTheme, // This is now actually the dark theme
-        darkTheme: AppTheme.lightTheme, // Same theme for both
-        themeMode: ThemeMode.dark, // Force dark mode
-        debugShowCheckedModeBanner: false,
-        home: const AuthWrapper(),
-      ),
+    return MaterialApp(
+      title: 'DR Lab LIMS',
+      theme: AppTheme.lightTheme, // This is now actually the dark theme
+      darkTheme: AppTheme.lightTheme, // Same theme for both
+      themeMode: ThemeMode.dark, // Force dark mode
+      debugShowCheckedModeBanner: false,
+      home: const AuthWrapper(),
     );
   }
 }
@@ -100,13 +104,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _initializeAuth() async {
     final authProvider = context.read<AuthProvider>();
     final clientProvider = context.read<ClientProvider>();
+    final projectProvider = context.read<ProjectProvider>();
     
     // Initialize auth provider (this will check stored tokens)
     await authProvider.initializeAuth();
     
-    // Set auth token for client service if user is authenticated
+    // Set auth token for all services if user is authenticated
     if (authProvider.isAuthenticated && authProvider.token != null) {
       clientProvider.setAuthToken(authProvider.token!);
+      projectProvider.updateAuthToken(authProvider.token!);
     }
   }
 
