@@ -73,7 +73,9 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'DR Lab LIMS',
-        theme: AppTheme.lightTheme,
+        theme: AppTheme.lightTheme, // This is now actually the dark theme
+        darkTheme: AppTheme.lightTheme, // Same theme for both
+        themeMode: ThemeMode.dark, // Force dark mode
         debugShowCheckedModeBanner: false,
         home: const AuthWrapper(),
       ),
