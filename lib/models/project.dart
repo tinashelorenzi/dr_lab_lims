@@ -37,36 +37,37 @@ class Project {
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
-    return Project(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      clientId: json['client_id'] ?? json['client'] ?? '',
-      clientName: json['client_name'],
-      status: ProjectStatus.fromString(json['status'] ?? 'ACTIVE'),
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : DateTime.now(),
-      completedAt: json['completed_at'] != null
-          ? DateTime.parse(json['completed_at'])
-          : null,
-      createdBy: json['created_by'] ?? '',
-      createdByName: json['created_by_name'],
-      createdByEmail: json['created_by_email'],
-      samplesCount: json['samples_count'] ?? 0,
-      client: json['client'] != null 
-          ? Client.fromJson(json['client'])
-          : null,
-      recentSamples: json['recent_samples'] != null
-          ? (json['recent_samples'] as List)
-              .map((s) => RecentSample.fromJson(s))
-              .toList()
-          : null,
-    );
-  }
+  return Project(
+    id: json['id'] ?? '',
+    name: json['name'] ?? '',
+    description: json['description'] ?? '',
+    clientId: json['client_id'] ?? json['client'] ?? '',
+    clientName: json['client_name'],
+    status: ProjectStatus.fromString(json['status'] ?? 'ACTIVE'),
+    createdAt: json['created_at'] != null
+        ? DateTime.parse(json['created_at'])
+        : DateTime.now(),
+    updatedAt: json['updated_at'] != null
+        ? DateTime.parse(json['updated_at'])
+        : DateTime.now(),
+    completedAt: json['completed_at'] != null
+        ? DateTime.parse(json['completed_at'])
+        : null,
+    createdBy: json['created_by'] ?? '',
+    createdByName: json['created_by_name'],
+    createdByEmail: json['created_by_email'],
+    samplesCount: json['samples_count'] ?? 0,
+    // FIXED: Check if client is a Map or String
+    client: json['client'] != null && json['client'] is Map<String, dynamic>
+        ? Client.fromJson(json['client'])
+        : null,
+    recentSamples: json['recent_samples'] != null
+        ? (json['recent_samples'] as List)
+            .map((s) => RecentSample.fromJson(s))
+            .toList()
+        : null,
+  );
+}
 
   Map<String, dynamic> toJson() {
     return {
