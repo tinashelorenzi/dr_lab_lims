@@ -163,44 +163,69 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
     );
   }
 
+  // Calculate responsive sidebar width based on screen size
+  double _getSidebarWidth(BuildContext context, bool expanded) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    if (expanded) {
+      // Expanded: 25% of screen width, but clamped between 250px and 320px
+      return (screenWidth * 0.25).clamp(250.0, 320.0);
+    } else {
+      // Collapsed: Always 72px for icon + padding
+      return 72.0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: Row(
-        children: [
-          // Sidebar
-          _buildSidebar(),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Determine if we should auto-collapse on small screens
+          final shouldAutoCollapse = constraints.maxWidth < 768;
+          final effectiveExpanded = shouldAutoCollapse ? false : _sidebarExpanded;
           
-          // Main Content
-          Expanded(
-            child: Column(
-              children: [
-                _buildAppBar(),
-                Expanded(
-                  child: _buildContent(),
+          return Row(
+            children: [
+              // Sidebar - Responsive width
+              _buildSidebar(context, effectiveExpanded),
+              
+              // Main Content - Takes remaining space
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildAppBar(),
+                    Expanded(
+                      child: _buildContent(),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSidebar() {
+  Widget _buildSidebar(BuildContext context, bool effectiveExpanded) {
     return MouseRegion(
       onEnter: (_) => setState(() => _sidebarHovered = true),
       onExit: (_) => setState(() => _sidebarHovered = false),
       child: AnimatedBuilder(
         animation: _sidebarAnimation,
         builder: (context, child) {
-          final shouldShowLabels = _sidebarExpanded || _sidebarHovered;
-          final sidebarWidth = shouldShowLabels ? 280.0 : 80.0;
+          final shouldShowLabels = effectiveExpanded || _sidebarHovered;
+          final sidebarWidth = _getSidebarWidth(context, shouldShowLabels);
           
           return AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             width: sidebarWidth,
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.4, // Never more than 40% of screen
+              minWidth: 72, // Always at least 72px for icons
+            ),
             decoration: const BoxDecoration(
               color: AppTheme.surfaceColor,
               border: Border(
@@ -230,7 +255,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
   Widget _buildSidebarHeader(bool showLabels) {
     return Container(
       height: 80,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(showLabels ? 20 : 16),
       child: Row(
         children: [
           // Toggle Button
@@ -267,12 +292,16 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                   Text(
                     'Laboratory Management',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.secondaryTextColor,
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ],
               ),
@@ -285,27 +314,33 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
 
   Widget _buildNavigationItems(bool showLabels) {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: _navigationItems.length,
       itemBuilder: (context, index) {
         final item = _navigationItems[index];
-        final isSelected = _selectedIndex == index;
+        final isSelected = index == _selectedIndex;
         
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
+        return Container(
+          margin: EdgeInsets.symmetric(
+            horizontal: showLabels ? 12 : 8, 
+            vertical: 2
+          ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
               onTap: () => setState(() => _selectedIndex = index),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
                 height: 48,
+                padding: EdgeInsets.symmetric(
+                  horizontal: showLabels ? 16 : 12
+                ),
                 decoration: BoxDecoration(
                   color: isSelected 
                       ? AppTheme.primaryColor.withOpacity(0.1)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
-                  border: isSelected
+                  border: isSelected 
                       ? Border.all(
                           color: AppTheme.primaryColor.withOpacity(0.3),
                           width: 1,
@@ -313,8 +348,8 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
                       : null,
                 ),
                 child: Row(
+                  mainAxisSize: showLabels ? MainAxisSize.max : MainAxisSize.min,
                   children: [
-                    const SizedBox(width: 16),
                     Icon(
                       item.icon,
                       size: 20,
@@ -322,6 +357,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
                           ? AppTheme.primaryColor
                           : AppTheme.secondaryTextColor,
                     ),
+                    
                     if (showLabels) ...[
                       const SizedBox(width: 16),
                       Expanded(
@@ -331,8 +367,12 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
                             color: isSelected 
                                 ? AppTheme.primaryColor
                                 : AppTheme.primaryTextColor,
-                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                            fontWeight: isSelected 
+                                ? FontWeight.w600 
+                                : FontWeight.w500,
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],
@@ -352,90 +392,133 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
         final user = authProvider.user;
         
         return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(
-            border: Border(
-              top: BorderSide(color: AppTheme.borderColor, width: 1),
-            ),
-          ),
-          child: Row(
-            children: [
-              // Avatar
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                child: Text(
-                  user?.firstName?.substring(0, 1).toUpperCase() ?? 'U',
-                  style: const TextStyle(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              
-              if (showLabels) ...[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${user?.firstName ?? ''} ${user?.lastName ?? ''}'.trim(),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
+          padding: EdgeInsets.all(showLabels ? 16 : 12),
+          child: showLabels 
+              ? Row(
+                  children: [
+                    // User Avatar
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                      child: Text(
+                        user?.email.substring(0, 1).toUpperCase() ?? 'U',
+                        style: const TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        user?.email ?? '',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.secondaryTextColor,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Logout Button
-                PopupMenuButton<String>(
-                  icon: const Icon(
-                    Icons.more_vert,
-                    size: 18,
-                    color: AppTheme.secondaryTextColor,
-                  ),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem<String>(
-                      value: 'profile',
-                      child: Row(
+                    ),
+                    
+                    const SizedBox(width: 12),
+                    
+                    // User Info - Flexible to prevent overflow
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.person_outline, size: 18),
-                          SizedBox(width: 12),
-                          Text('Profile'),
+                          Text(
+                            '${user?.firstName ?? ''} ${user?.lastName ?? ''}'.trim(),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          Text(
+                            user?.email ?? '',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.secondaryTextColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ],
                       ),
                     ),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem<String>(
-                      value: 'logout',
-                      child: Row(
-                        children: [
-                          Icon(Icons.logout, size: 18, color: AppTheme.errorColor),
-                          SizedBox(width: 12),
-                          Text('Sign Out', style: TextStyle(color: AppTheme.errorColor)),
-                        ],
+                    
+                    // Logout Button
+                    PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.more_vert,
+                        size: 18,
+                        color: AppTheme.secondaryTextColor,
                       ),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem<String>(
+                          value: 'profile',
+                          child: Row(
+                            children: [
+                              Icon(Icons.person_outline, size: 18),
+                              SizedBox(width: 12),
+                              Text('Profile'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem<String>(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(Icons.logout, size: 18, color: AppTheme.errorColor),
+                              SizedBox(width: 12),
+                              Text('Sign Out', style: TextStyle(color: AppTheme.errorColor)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) {
+                        if (value == 'logout') {
+                          _handleLogout(authProvider);
+                        }
+                      },
                     ),
                   ],
-                  onSelected: (value) {
-                    if (value == 'logout') {
-                      _handleLogout(authProvider);
-                    }
-                  },
+                )
+              : Center(
+                  child: PopupMenuButton<String>(
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                      child: Text(
+                        user?.email.substring(0, 1).toUpperCase() ?? 'U',
+                        style: const TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'profile',
+                        child: Row(
+                          children: [
+                            Icon(Icons.person_outline, size: 18),
+                            SizedBox(width: 12),
+                            Text('Profile'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            Icon(Icons.logout, size: 18, color: AppTheme.errorColor),
+                            SizedBox(width: 12),
+                            Text('Sign Out', style: TextStyle(color: AppTheme.errorColor)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'logout') {
+                        _handleLogout(authProvider);
+                      }
+                    },
+                  ),
                 ),
-              ],
-            ],
-          ),
         );
       },
     );
@@ -443,72 +526,39 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
 
   Widget _buildAppBar() {
     return Container(
-      height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: const BoxDecoration(
-        color: AppTheme.backgroundColor,
+        color: AppTheme.surfaceColor,
         border: Border(
           bottom: BorderSide(color: AppTheme.borderColor, width: 1),
         ),
       ),
       child: Row(
         children: [
-          // Page Title
-          Text(
-            _navigationItems[_selectedIndex].label,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          
-          const Spacer(),
-          
-          // Search
-          SizedBox(
-            width: 300,
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.primaryColor),
-                ),
-                filled: true,
-                fillColor: AppTheme.surfaceColor,
+          // Breadcrumb/Current Page
+          Expanded(
+            child: Text(
+              _navigationItems[_selectedIndex].label,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
           
-          const SizedBox(width: 16),
-          
-          // Notifications
+          // Additional app bar actions
           IconButton(
-            onPressed: () {
-              // TODO: Implement notifications
-            },
+            onPressed: () {},
             icon: const Icon(Icons.notifications_outlined),
-            tooltip: 'Notifications',
           ),
           
           const SizedBox(width: 8),
           
-          // Help
           IconButton(
-            onPressed: () {
-              // TODO: Implement help
-            },
-            icon: const Icon(Icons.help_outline),
-            tooltip: 'Help',
+            onPressed: () {},
+            icon: const Icon(Icons.search),
           ),
         ],
       ),
@@ -516,8 +566,10 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
   }
 
   Widget _buildContent() {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      padding: const EdgeInsets.all(24),
       child: _navigationItems[_selectedIndex].tab,
     );
   }
