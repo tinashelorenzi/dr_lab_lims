@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../shared/theme.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/clients_tab.dart';
+import 'tabs/client_projects_tab.dart';
 import 'tabs/samples_tab.dart';
 import 'tabs/test_entries_tab.dart';
 import 'tabs/reports_tab.dart';
@@ -55,6 +56,12 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
       label: 'Clients',
       icon: Icons.people_outlined,
       tab: ClientsTab(),
+    ),
+    const NavigationItem(
+      id: 'client_projects',
+      label: 'Client Projects',
+      icon: Icons.work_outline,
+      tab: ClientProjectsTab(),
     ),
     const NavigationItem(
       id: 'samples',
