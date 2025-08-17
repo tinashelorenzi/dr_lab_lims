@@ -1,12 +1,11 @@
 // lib/screens/main/main_layout_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../shared/theme.dart';
-import '../../widgets/glass_container.dart';
 import 'tabs/dashboard_tab.dart';
+import 'tabs/clients_tab.dart';
 import 'tabs/samples_tab.dart';
 import 'tabs/test_entries_tab.dart';
 import 'tabs/reports_tab.dart';
@@ -50,6 +49,12 @@ class _MainLayoutScreenState extends State<MainLayoutScreen>
       label: 'Dashboard',
       icon: Icons.dashboard_outlined,
       tab: DashboardTab(),
+    ),
+    const NavigationItem(
+      id: 'clients',
+      label: 'Clients',
+      icon: Icons.people_outlined,
+      tab: ClientsTab(),
     ),
     const NavigationItem(
       id: 'samples',
